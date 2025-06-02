@@ -1,0 +1,95 @@
+@page "/verificacion-doble-autenticacion"
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager NavigationManager
+@using System.ComponentModel.DataAnnotations
+<h3>Verificación</h3>
+
+<AuthorizeView>
+    <Authorized Context="auth">
+        @if (auth.User.IsInRole("Gerente"))
+        {
+            <p>Hola, gerente @auth.User.Identity.Name 👋</p>
+        }
+        else if (auth.User.IsInRole("Empleado"))
+        {
+            <p>Hola, empleado @auth.User.Identity.Name 👷‍♂️</p>
+        }
+        else if (auth.User.IsInRole("Administrador"))
+        {
+            <p>Rol no reconocido.</p>
+        }
+    </Authorized>
+</AuthorizeView>
+
+<EditForm Model="@modelo" OnValidSubmit="ProcesarVerificacion" FormName="CodigoVerificacion">
+    <DataAnnotationsValidator />
+
+    <div class="mb-3">
+        <label>Email:</label>
+        <InputText @bind-Value="modelo.Correo" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label>Código de verificación:</label>
+        <InputText @bind-Value="modelo.Codigo" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Verificar</button>
+
+    @if (mensaje != null)
+    {
+        <div class="alert alert-info mt-3">@mensaje</div>
+    }
+</EditForm>
+
+
+@code {
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm]
+    private VerificacionModel modelo { get; set; } = new();
+    private string? mensaje;
+    RepositorioPersonal repositorioPersonal = new RepositorioPersonal();
+    CasoDeUsoValidarCodigoDeSeguridad casoDeUsoValidarCodigoDeSeguridad = new CasoDeUsoValidarCodigoDeSeguridad(new
+    RepositorioPersonal());
+    private async Task ProcesarVerificacion()
+    {
+        if (modelo.Codigo != "0")
+
+        {
+            Personal usuario = casoDeUsoValidarCodigoDeSeguridad.Ejecutar(modelo.Correo, modelo.Codigo);
+            if (usuario != null)
+            {
+                mensaje = "¡Verificación exitosa!";
+                await guardarEnCookie(modelo.Correo, usuario.Rol);
+            }
+            else
+            {
+                mensaje = "Email o código incorrecto.";
+            }
+        }
+    }
+
+    public class VerificacionModel
+    {
+        [EmailAddress]
+        public string Correo { get; set; } = "";
+
+        public string Codigo { get; set; } = "";
+    }
+
+    private async Task guardarEnCookie(String correo, RolUsuario rol)
+    {
+
+        var claims = new List<Claim> {
+new Claim(ClaimTypes.Name, correo),
+new Claim(ClaimTypes.Role, rol.ToString())
+};
+        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal(identity);
+        await HttpContext.SignInAsync(principal);
+        NavigationManager.NavigateTo("/");
+    }
+}
