@@ -27,7 +27,7 @@ public class Alquiler
         Precio = precio;
         NombreDePersonal = nombreDePersonal;
         ApellidoDePersonal = apellidoDePersonal;
-        Registro = null;//cambiar despues
+        Registro = null;//Lo creo en null y despues lo agrego
         Cancelado = false;  // Por defecto, un alquiler recién creado no está cancelado.
     }
 
@@ -47,4 +47,5 @@ public class Alquiler
         return EstadoDeAlquiler.Terminado;
     }
 
+    
 }
